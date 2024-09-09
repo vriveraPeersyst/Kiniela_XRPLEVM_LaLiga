@@ -1,0 +1,78 @@
+"use client";
+import React, { useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { toast } from "sonner";
+import { bettingContractABI, bettingContractAddress } from "@/constants/contracts";
+import { ethers } from "ethers";
+
+const SubmitBets = ({ bets }: { bets: string[] }) => {
+  const { data: hash, isPending, writeContract } = useWriteContract();
+
+  const ensure0xPrefix = (address: string): `0x${string}` => {
+    if (!address.startsWith("0x")) {
+      return `0x${address}`;
+    }
+    return address as `0x${string}`;
+  };
+
+  // Ensure bettingContractAddress has the correct format
+  const formattedBettingContractAddress = ensure0xPrefix(bettingContractAddress);
+
+  const handleSubmit = async () => {
+    try {
+      // Prepare the arguments for the contract call
+      const encodedBets = bets.map(bet => ethers.encodeBytes32String(bet));
+
+      // Log the encoded bets to the console
+      console.log("Encoded Bets:", encodedBets);
+
+      // Call the contract's placeBet function
+      writeContract({
+        address: formattedBettingContractAddress,
+        abi: bettingContractABI,
+        functionName: "placeBet",
+        args: [encodedBets],
+        value: ethers.parseEther("150.0"), // Adjust the value to the correct amount
+      });
+    } catch (error) {
+      console.error("Error placing bet:", error);
+      toast.error("Transaction Failed: " + error);
+    }
+  };
+
+  const {
+    isLoading: isConfirming,
+    error,
+    isSuccess: isConfirmed,
+  } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  useEffect(() => {
+    if (isConfirming) {
+      toast.loading("Transaction Pending...");
+    }
+    if (isConfirmed) {
+      toast.success("Transaction Successful", {
+        action: {
+          label: "View on Explorer",
+          onClick: () => {
+            window.open(`https://explorer.xrplevm.org/tx/${hash}`);
+          },
+        },
+      });
+    }
+    if (error) {
+      toast.error("Transaction Failed");
+    }
+  }, [isConfirming, isConfirmed, error, hash]);
+
+  return (
+    <Button onClick={handleSubmit} disabled={isPending || isConfirming}>
+      {isPending ? "Confirming..." : "Submit Bets"}
+    </Button>
+  );
+};
+
+export default SubmitBets;

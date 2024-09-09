@@ -11,16 +11,16 @@ export default function Nav() {
           <li>
           <a
             className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+            href="http://localhost:3000"
             target="_blank"
             rel="noopener noreferrer"
           >
             <Image
-              src="/pex.png"
-              alt="PEX Logo"
-              className="dark:invert"
+              src="/MDLRlogo.jpg"
+              alt="MDLR Logo"
               width={100}
               height={24}
+              className="rounded-full"
               priority
             />
           </a>

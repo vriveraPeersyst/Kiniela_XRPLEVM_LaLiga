@@ -39,7 +39,7 @@ export default function Home() {
         action: {
           label: "View on Etherscan",
           onClick: () => {
-            window.open(`https://explorer-testnet.morphl2.io/tx/${hash}`);
+            window.open(`https://explorer.xrplevm.org/tx/${hash}`);
           },
         },
       });
@@ -54,7 +54,7 @@ export default function Home() {
       <section className="py-12 flex flex-col items-center text-center gap-8">
         <h1 className="text-4xl font-bold">Web3 Starter Kit</h1>
         <p className="text-2xl text-muted-foreground">
-          Build your dapp frontends with the latest tools.
+          La Liga Quiniela loading...
         </p>
       </section>
       <div className="flex gap-6 items-center justify-center">
@@ -71,20 +71,20 @@ export default function Home() {
               onClick={() =>
                 sendTransaction({
                   to: "0x1a343eFB966E63bfA25A2b368455448f02466Ffc",
-                  value: parseEther("0.1"),
+                  value: parseEther("33"),
                 })
               }
               disabled={isConfirming}
-              variant={"secondary"}
+              //variant={"secondary"}
             >
-              Tip .1 Eth
+              Tip 33 XRP
             </Button>
           </>
         )}
       </div>
       <div className="flex mt-10 items-center justify-center">
-        <Link href="/counter">
-          <Button className="w-60">Counter</Button>
+        <Link href="/quiniela">
+          <Button className="w-60">Bet NOW</Button>
         </Link>
       </div>
     </main>

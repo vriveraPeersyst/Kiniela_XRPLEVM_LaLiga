@@ -1,0 +1,63 @@
+"use client";
+import React, { useState, useEffect } from "react";
+import { useAccount } from "wagmi";
+import MatchList from "./components/MatchList";
+import SubmitBets from "./components/SubmitBets";
+import { fetchBettingStatus, getMatchResults } from "@/app/services/bettingService";
+import { Match } from "@/types";
+
+const QuinielaPage = () => {
+  const { isConnected } = useAccount();
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [selectedBets, setSelectedBets] = useState<string[]>([]);
+  const [isBettingAllowed, setIsBettingAllowed] = useState(false);
+  const matchday = 3; // Replace with dynamic matchday if needed
+
+  useEffect(() => {
+    const loadBettingStatus = async () => {
+      try {
+        const bettingAllowed = await fetchBettingStatus(matchday);
+        setIsBettingAllowed(bettingAllowed);
+
+        if (bettingAllowed) {
+          const fetchedMatches = await getMatchResults(matchday);
+          setMatches(fetchedMatches);
+        }
+      } catch (error) {
+        console.error("Error loading betting status or matches", error);
+      }
+    };
+
+    loadBettingStatus();
+  }, [matchday]);
+
+  const handleBetChange = (index: number, bet: string) => {
+    const updatedBets = [...selectedBets];
+    updatedBets[index] = bet;
+    setSelectedBets(updatedBets);
+  };
+
+  return (
+    <main className="flex flex-col items-center py-12">
+      <h1 className="text-4xl font-bold mb-6">La Liga Quiniela</h1>
+      {isConnected ? (
+        <>
+          {isBettingAllowed ? (
+            <>
+              <MatchList matches={matches} onBetChange={handleBetChange} />
+              <SubmitBets bets={selectedBets} />
+            </>
+          ) : (
+            <p className="text-xl text-muted-foreground">
+              Betting is not allowed at this time.
+            </p>
+          )}
+        </>
+      ) : (
+        <p>Please connect your wallet to place bets.</p>
+      )}
+    </main>
+  );
+};
+
+export default QuinielaPage;
