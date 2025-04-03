@@ -1,4 +1,3 @@
-```markdown
 # Kiniela XRPL EVM - LaLiga
 
 This project is a **LaLiga Quiniela** (sports prediction) decentralized application running on the **XRPL EVM** chain. It uses a Next.js frontend and an Express.js backend. Bets and match information are sourced from:
@@ -185,4 +184,3 @@ NEXT_PUBLIC_PROJECT_ID=<YOUR_WEB3MODAL_PROJECT_ID>
 ## License
 
 This project is provided “as-is” under an open-source license. See [LICENSE](LICENSE) file (if provided) for details.
-```

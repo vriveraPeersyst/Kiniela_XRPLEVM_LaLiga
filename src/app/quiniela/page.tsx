@@ -9,7 +9,7 @@ import { Match } from "@/types";
 const QuinielaPage = () => {
   const { isConnected } = useAccount();
   const [matches, setMatches] = useState<Match[]>([]);
-  const matchday = 5; // Replace with dynamic matchday if needed
+  const matchday = 30; // Replace with dynamic matchday if needed
 
   // Initialize selectedBets with default "HOME_TEAM"
   const [selectedBets, setSelectedBets] = useState<string[]>(Array(10).fill("HOME_TEAM"));
