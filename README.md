@@ -1,186 +1,236 @@
-# Kiniela XRPL EVM - LaLiga
+# Kiniela - XRPL EVM LaLiga
 
-This project is a **LaLiga Quiniela** (sports prediction) decentralized application running on the **XRPL EVM** chain. It uses a Next.js frontend and an Express.js backend. Bets and match information are sourced from:
+A **LaLiga Quiniela (sports betting game)** powered by a custom on-chain Oracle and Betting contract on the **XRPL EVM** network. Includes:
 
-1. An **external football API** (via `api.football-data.org`)
-2. An on-chain **Oracle contract** providing official matchday order and betting status
-3. A **Betting contract** for placing wagers using XRP.
+1. **Next.js Frontend** + **Express.js Backend** for serving match data
+2. **Oracle Contract** to store weekly matches, lock betting windows, and record results
+3. **Betting Contract** to place bets, store wagers, and distribute rewards on final results
+4. **Automated Node.js script** for continuously syncing real-world match results from [Football-Data.org](https://www.football-data.org/).
 
-The frontend is built with Next.js (React) and TailwindCSS, while the backend uses Express.js to fetch data from the football API and serve it to the client.
+<br />
 
----
+## Table of Contents
+
+1. [Features](#features)  
+2. [Repository Structure](#repository-structure)  
+3. [Requirements](#requirements)  
+4. [Installation & Setup](#installation--setup)  
+5. [Running the App](#running-the-app)  
+6. [How the DApp Works](#how-the-dapp-works)  
+7. [Automated Oracle & Betting Script](#automated-oracle--betting-script)  
+8. [Environment Variables](#environment-variables)  
+9. [Contracts](#contracts)  
+10. [License](#license)
+
+<br />
 
 ## Features
 
-- **Match Data Fetching**: The backend calls `api.football-data.org` and references the Oracle Contract on XRPL EVM to figure out the exact match ordering.
-- **Placing Bets**: The frontend communicates with the Betting Contract on XRPL EVM to submit your wagers (predictions) for each match.
-- **On-Chain Logic**: Both the Oracle Contract (for official match info) and the Betting Contract (for handling wagers and payouts) reside on XRPL EVM.
-- **Modern Web3 Integration**: Uses wagmi, Web3Modal, and ethers for connecting wallets and handling transactions.
-- **TailwindCSS**: For styling the Next.js app with support for dark mode and custom theming.
+- **Chain**: XRPL EVM, with the main currency as XRP.  
+- **Next.js + Tailwind**: Modern UI, dark mode, and a responsive layout.  
+- **wagmi + Web3Modal**: Connect to XRPL EVM wallets (MetaMask, etc.) with ease.  
+- **Express.js Backend**: Provides `/api/matches` endpoint, sorting external data based on on-chain Oracle data.  
+- **Oracle Contract**:
+  - Keeps an official list of matches (`setWeeklyMatches`).
+  - Allows or disables betting (`setBettingAllowed`).
+  - Updates final results (`setMatchResults`), marking postponed/canceled as `NULL`.
+- **Betting Contract**:
+  - Accepts bets (`placeBet`), each user picks outcomes per match.
+  - Finalizes matchday (`finalizeMatchdayAndEvaluateBets`) and distributes the pot to correct bets.
 
----
+<br />
 
-## Prerequisites
+## Repository Structure
 
-- **Node.js** (v16+ recommended)
-- **Yarn** or **npm** (your preference)
-- **An XRPL EVM-compatible wallet** or injected provider (e.g., MetaMask in an XRPL EVM configured environment)
-- **A `.env` file** with the required environment variables (see below)
-
----
-
-## Project Structure
-
-See the [repo_report.txt](./repo_report.txt) or just run `./generate_report.sh` to view a comprehensive list of files and their contents. Brief overview:
-
-```
-Kiniela_XRPLEVM_LaLiga
-├── backend
-│   ├── server.js          # Main Express.js server
-│   ├── serverOld.js       # Old server reference
-│   └── package.json
-├── src
-│   ├── app
-│   │   ├── services
-│   │   ├── quiniela
-│   │   └── page.tsx       # Main Next.js page
-│   ├── chains
-│   ├── components         # Reusable UI components
-│   ├── constants          # Contract ABIs and addresses
-│   ├── contexts           # React context for Web3Modal
-│   ├── lib                # Utility functions
-│   └── types.ts           # Shared TypeScript types
-├── next.config.mjs
-├── tailwind.config.ts
-├── tsconfig.json
-└── package.json
-```
-
----
-
-## Environment Variables
-
-Create a file named `.env` (in the `Kiniela_XRPLEVM_LaLiga` directory) and set the following:
-
-```dotenv
-# Football Data API
-FOOTBALL_API_KEY=<YOUR_FOOTBALL_DATA_API_KEY>
-COMPETITION_ID=<LA_LIGA_COMPETITION_ID> 
-   # For La Liga, typically "PD" or a specific numeric ID, depending on your subscription
-
-# XRPL EVM Node
-WEB3_RPC_URL=<XRPL_EVM_RPC_URL>
-
-# Oracle Contract
-ORACLE_CONTRACT_ADDRESS=<YOUR_ORACLE_CONTRACT_ADDRESS>
-
-# Betting Contract
-BETTING_CONTRACT_ADDRESS=<YOUR_BETTING_CONTRACT_ADDRESS>
-
-# Deployer's Private Key (if needed by the backend for updating data on chain)
-PRIVATE_KEY=<PRIVATE_KEY_FOR_BACKEND_ACTIONS>
-
-# Web3Modal / Wagmi
-NEXT_PUBLIC_PROJECT_ID=<YOUR_WEB3MODAL_PROJECT_ID>
+```plaintext
+.
+├── Kiniela_XRPLEVM_LaLiga
+│   ├── .env
+│   ├── .eslintrc.json
+│   ├── .gitignore
+│   ├── .next/               # Next.js build output
+│   ├── backend/             # Express.js server
+│   │   ├── server.js
+│   │   └── serverOld.js
+│   ├── components.json
+│   ├── contracts/
+│   │   ├── LaLigaMatchResultsOracle.sol
+│   │   └── LaLigaQuiniela.sol
+│   ├── oracle-backend/
+│   │   └── quiniela-backend.js  # Automated script to poll & update results
+│   ├── public/
+│   │   └── MDLRlogo.JPG
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── globals.css
+│   │   │   ├── layout.tsx
+│   │   │   ├── page.tsx
+│   │   │   ├── quiniela/
+│   │   │   └── services/
+│   │   ├── chains/
+│   │   ├── components/
+│   │   ├── configs/
+│   │   ├── constants/
+│   │   ├── contexts/
+│   │   ├── lib/
+│   │   └── types.ts
+│   ├── tailwind.config.ts
+│   ├── next.config.mjs
+│   ├── package.json
+│   └── yarn.lock
+├── generate_report.sh
+├── repo_report.txt
+└── yarn.lock
 ```
 
-> **Note**: `PRIVATE_KEY` is only used if you want the backend to sign transactions that update the betting or oracle contract. If you only rely on the frontend for user-signed transactions, you can omit it.
+**See** `generate_report.sh` + `repo_report.txt` for a detailed overview of all files.
 
----
+<br />
 
-## Installation and Setup
+## Requirements
 
-1. **Clone the repo**:
+1. **Node.js 16+**  
+2. **Yarn** or **npm** (choose one)  
+3. **XRPL EVM-compatible wallet** (MetaMask on XRPL EVM config)  
+4. **Deployed Contracts** or test environment addresses  
+5. **Football-Data.org API Key** (for real match data)
+
+<br />
+
+## Installation & Setup
+
+1. **Clone Repo**  
    ```bash
    git clone https://github.com/youruser/Kiniela_XRPLEVM_LaLiga.git
    cd Kiniela_XRPLEVM_LaLiga
    ```
 
-2. **Install dependencies**:
+2. **Install Dependencies**  
    ```bash
+   # Using Yarn:
+   yarn
+   # OR using NPM:
    npm install
    ```
-   or
-   ```bash
-   yarn
+
+3. **Add `.env` File**  
+   ```dotenv
+   FOOTBALL_API_KEY=<Your Football-Data.org API Key>
+   COMPETITION_ID=<LaLiga Competition ID>  # E.g. "PD"
+   WEB3_RPC_URL=<XRPL EVM RPC>
+   ORACLE_CONTRACT_ADDRESS=<Deployed Oracle Address>
+   BETTING_CONTRACT_ADDRESS=<Deployed Betting Address>
+   PRIVATE_KEY=<Private Key for Admin calls>
+   PORT=<Optional: defaults to 5589 for the backend>
+   NEXT_PUBLIC_PROJECT_ID=<Web3Modal or your project ID>
    ```
+   > Make sure the **PRIVATE_KEY** is the admin for both Oracle and Betting.  
 
-3. **Set up environment**:
-   - Create a `.env` file (as above) with your credentials and addresses.
+4. **Build or Start**  
+   - **Development**:
+     ```bash
+     npm run dev
+     ```
+     This runs both the **backend** (`server.js`) on port `5589` and **Next.js** on port `3000` (using `concurrently`).
+   - **Production**:
+     ```bash
+     npm run build
+     npm run start
+     ```
+     This will run Next.js in production and your Express server concurrently.
 
-4. **Run in development**:
-   ```bash
-   npm run dev
+<br />
+
+## Running the App
+
+- **Open Frontend**: [http://localhost:3000](http://localhost:3000)
+- **Backend** runs at: [http://localhost:5589](http://localhost:5589)
+- **Match Data Endpoint**: [http://localhost:5589/api/matches?matchday=XXX](http://localhost:5589/api/matches?matchday=XXX)
+
+**Note**: The `FOOTBALL_API_KEY` requests [Football-Data.org](https://www.football-data.org/) to get real matches from `competitions/PD/matches?matchday=X`.
+
+<br />
+
+## How the DApp Works
+
+1. **User Flow**:
+   1. User **connects wallet** via Web3Modal on the Next.js UI.
+   2. Goes to **“Bet NOW”** (at `/quiniela`).
+   3. The DApp fetches the official weekly matches from the **Oracle Contract** + Football API to display them in the correct order.
+   4. User selects **Home/Draw/Away** for each match, then clicks **Submit Bets**.
+   5. The contract call to `placeBet()` is executed on XRPL EVM, collecting the user’s stake.
+   6. Later, once results are posted, the admin finalizes (`finalizeMatchdayAndEvaluateBets`) on the contract, distributing the pot to correct bettors.
+
+2. **Oracle**:
+   - The Oracle Admin sets **weekly matches**: `oracleContract.setWeeklyMatches(...)`.
+   - Once matches end, the admin or the automated script calls `oracleContract.setMatchResults(...)` to record winners or `NULL`.
+   - Disables betting for that matchday automatically.
+   - Allows the BettingContract to finalize.
+
+3. **Betting**:
+   - Each matchday has a pot.  
+   - `placeBet(...)` puts user’s stake (777 XRP in the example) into the pot.  
+   - On finalization, the pot splits among those who guessed **all** non-`NULL` matches correctly.
+
+<br />
+
+## Automated Oracle & Betting Script
+
+Inside `oracle-backend/quiniela-backend.js`, there’s a **polling script** that:
+
+1. Polls the **Football-Data.org** API every minute (`pollingInterval = 60000`).
+2. Compares the real match statuses (FINISHED, IN_PROGRESS, POSTPONED, etc.) with on-chain data.
+3. If **all** non-rescheduled matches are done, calls:
+   ```solidity
+   oracleContract.setMatchResults(matchday, results);
+   bettingContract.finalizeMatchdayAndEvaluateBets();
    ```
-   This will:
-   - Start the Express backend on port `5589`.
-   - Start the Next.js frontend on port `3000`.
+4. Handles **rescheduled** matches by marking them `NULL` until they eventually finish.
 
-5. **Open the app**:
-   - Go to [http://localhost:3000](http://localhost:3000) in your browser.
-   - The backend endpoints are served at `http://localhost:5589/api/...`.
+To run:
+```bash
+cd oracle-backend
+node quiniela-backend.js
+```
+Keep this running in the background (on a server, Docker, etc.) to auto-update the Oracle.
 
-6. **Production build**:
-   ```bash
-   # Build for production
-   npm run build
+<br />
 
-   # Then run the production server
-   npm run start
-   ```
-   - This concurrently starts the backend (`server.js`) and the Next.js production build.
+## Environment Variables
 
----
+| Variable                     | Purpose                                                                                     |
+|-----------------------------|---------------------------------------------------------------------------------------------|
+| `FOOTBALL_API_KEY`          | Key for [Football-Data.org](https://www.football-data.org/)                                |
+| `COMPETITION_ID`            | Competition code, e.g. “PD” for LaLiga                                                     |
+| `WEB3_RPC_URL`              | XRPL EVM RPC endpoint                                                                      |
+| `ORACLE_CONTRACT_ADDRESS`   | Deployed Oracle contract address                                                           |
+| `BETTING_CONTRACT_ADDRESS`  | Deployed Betting contract address                                                          |
+| `PRIVATE_KEY`               | Admin’s private key to sign updates (for `setMatchResults`, etc.)                          |
+| `PORT`                      | (Optional) Express server port (default 5589)                                              |
+| `NEXT_PUBLIC_PROJECT_ID`    | Web3Modal / Wagmi project ID                                                               |
 
-## Usage
+<br />
 
-1. **Connect your wallet** (configured to XRPL EVM) with the **“Connect Wallet”** button.
-2. **Go to Quiniela**: Click the "Bet NOW" button or navigate to `/quiniela`.
-3. **Select predictions**: For each match, choose **Home Win**, **Draw**, or **Away Win**.
-4. **Submit Bets**: Click **“Submit Bets”**. A wallet transaction will pop up for confirmation.
-5. **Transaction**: Wait for the transaction to confirm on the XRPL EVM chain. You’ll see a success message once confirmed.
+## Contracts
 
----
+**`contracts/LaLigaMatchResultsOracle.sol`**  
+- Maintains match IDs, betting status toggles, and final results.  
+- Admin sets `weeklyMatches` each matchday, then updates results when done.
 
-## How It Works (High-Level)
+**`contracts/LaLigaQuiniela.sol`**  
+- Accepts bets for each matchday.  
+- Finalizes with the Oracle’s final results, awarding the pot to winners.
 
-- **LaLiga Oracle**:
-  - The Oracle Contract stores weekly matches (identified by TLA pairs like `FCBATM` for Barcelona vs. Atlético Madrid).
-  - `server.js` calls the Oracle Contract to read an ordered list of matches for a given `matchday`.
-  - It then queries the public football API (`api.football-data.org`) using `FOOTBALL_API_KEY`, retrieves match data, and reorders it to match the Oracle’s official sequence.
+Both are written in **Solidity 0.8+** and tested on XRPL EVM.
 
-- **Betting Contract**:
-  - The frontend uses `wagmi` hooks to sign a transaction that invokes `placeBet(...)`.
-  - Bets are stored on-chain, referencing the current `matchday`.
-  - The bet amount is included in the transaction’s value (e.g., 777 XRP).
-  - Once final results are provided to the Oracle Contract, the Betting Contract can evaluate winners.
-
----
-
-## Scripts
-
-- **`generate_report.sh`**: Creates `repo_report.txt`, listing the entire file tree (skipping `node_modules`) and contents of important files. Useful for debugging or an overview of changes.
-
-- **`lint`**: Runs ESLint checks:
-  ```bash
-  npm run lint
-  ```
-
-- **`build`**: Builds the Next.js app for production.
-
-- **`start`**: Runs both the production Next.js server and the backend server.
-
----
-
-## Contributing
-
-1. Fork the repository.
-2. Create a new branch for your feature/fix.
-3. Commit changes with descriptive messages.
-4. Push and create a Pull Request.
-
----
+<br />
 
 ## License
 
-This project is provided “as-is” under an open-source license. See [LICENSE](LICENSE) file (if provided) for details.
+This repository is provided “as-is” under an open-source license (MIT or your chosen license).  
+Feel free to modify, fork, or distribute as needed.
+
+---
+
+**Enjoy your LaLiga Quiniela on XRPL EVM!**  
+For questions or contributions, please open an issue or pull request.
